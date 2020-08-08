@@ -6,7 +6,19 @@ The keyword lookup currently uses SymSpell with labels extracted from the ontolo
 ## Installation
 
 Clone the repo, and run `lein deps` to get started.  
+The [@Lundez](https://github.com/Lundez/JavaSymSpell) SymSpell library is not available on Maven, so you must first clone, build, and install it.  
+Once built, install the jar to your local maven repo:
+```
+mvn install:install-file 
+   -Dfile=symspell.jar \
+   -DgroupId=org.lundez \
+   -DartifactId=symspell \
+   -Dversion=1.0-SNAPSHOT \
+   -Dpackaging=jar \
+   -DgeneratePom=true`
+```
 
+This is now accessible to leiningen and, by extension, SOG.
 ## Usage
 
 You may start the program with `lein run -- --conf config.edn`.  

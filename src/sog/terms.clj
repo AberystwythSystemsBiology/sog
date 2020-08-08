@@ -3,17 +3,8 @@
             FileInputStream
             File
             FileNotFoundException
-            PushbackReader]
-           [io.github.mightguy.spellcheck.symspell.impl
-            InMemoryDataHolder
-            SymSpellCheck]
-           [io.github.mightguy.spellcheck.symspell.common
-            SpellCheckSettings
-            Murmur3HashFunction
-            WeightedDamerauLevenshteinDistance
-            QwertyDistance
-            DictionaryItem
-            Verbosity])
+            PushbackReader]                      
+           [SymSpell SymSpell SuggestItem])
   (:require [omniconf.core :as cfg]
             [sog.db :refer [make-query query-db DbState]]
             [mount.core :refer [defstate]]
@@ -28,47 +19,19 @@
   (io/file (cfg/get :string-cache-dir)
            file-name))
 
-(defn mk-sc-settings
-  []
-  (-> (SpellCheckSettings/builder)
-      (.maxEditDistance (cfg/get :distance))
-      (.keySplitRegex "\t+")
-      (.build)))
-
-(defn mk-sc-holder
-  [sc-settings]
-  (InMemoryDataHolder. sc-settings (Murmur3HashFunction.)))
-
-(defn mk-sc-distance
-  [sc-settings]
-  (WeightedDamerauLevenshteinDistance.
-   (.getDeletionWeight sc-settings)
-   (.getInsertionWeight sc-settings)
-   (.getReplaceWeight sc-settings)
-   (.getTranspositionWeight sc-settings)
-   (QwertyDistance.)))
-
-(defn mk-sc-checker
-  [sc-settings sc-holder sc-distance]
-  (SymSpellCheck. sc-holder sc-distance sc-settings))
-
 (defn make-dict-from-terms
   [terms]
-  (let [sc-settings (mk-sc-settings)
-        sc-holder (mk-sc-holder sc-settings)
-        sc-distance (mk-sc-distance sc-settings)
-        sc-checker (mk-sc-checker sc-settings sc-holder sc-distance)]
+  (let [symspell (SymSpell. -1 (cfg/get :distance) -1 0)]
     (doall
      (->> terms
           (map (fn [[term labels]]
                  (->> labels
-                      (map (fn [label]
-                             (let [item (DictionaryItem. label 1.0 1.0)]
-                               (.addItem sc-holder item)
-                               {label term})))
+                      (map (fn [label]                             
+                             (.createDictionaryEntry symspell label 1 nil)
+                             {label term}))
                       (reduce merge))))
           (reduce merge)
-          (vector sc-holder sc-checker)))))
+          (vector symspell)))))
 
 (defn describe-query
   [url]
@@ -203,21 +166,24 @@
   [infile]
   (try
     (let [terms (read-term-file infile)
-          [sc-holder sc-checker term-dict] (make-dict-from-terms terms)]
-      {:sc-holder sc-holder
-       :sc-checker sc-checker
+          [symspell term-dict] (make-dict-from-terms terms)]
+      {:symspell symspell
        :term-dict term-dict})
     (catch FileNotFoundException e
         (let [terms (get-term-labels)
-              [sc-holder sc-checker term-dict] (make-dict-from-terms terms)]
+              [symspell term-dict] (make-dict-from-terms terms)]
           (write-term-file! infile terms)
-          {:sc-holder sc-holder
-           :sc-checker sc-checker
+          {:symspell symspell
            :term-dict term-dict}))))
+
+(defn suggest-item->map
+  [suggest-item]
+  {:term (.term suggest-item)
+   :distance (.distance suggest-item)})
 
 (defn enhance-suggestion
   [suggest-item]
-  (let [{:keys [term distance]} (bean suggest-item)
+  (let [{:keys [term distance]} (suggest-item->map suggest-item)
         url (get (:term-dict TermState) term)
         meta (describe-item url)]
     {:term term
@@ -226,19 +192,18 @@
      :meta meta}))
 
 (defn lookup-term
-  [term max-dist]
-  (let [spell-suggestions (.lookup (:sc-checker TermState)
+  [term]
+  (let [spell-suggestions (.lookup (:symspell TermState)
                                    term
-                                   Verbosity/ALL
-                                   max-dist)
+                                   SymSpell.SymSpell$Verbosity/All)
         enhanced-suggestions (map enhance-suggestion spell-suggestions)]
     enhanced-suggestions))
 
 (defn start-terms
   []
-  (let [{:keys [sc-holder sc-checker term-dict]}
+  (let [{:keys [symspell term-dict]}
         (load-or-make-dict (term-file "terms.edn"))]
-    {:sc-checker sc-checker
+    {:symspell symspell
      :term-dict term-dict}))
 
 (defn stop-terms

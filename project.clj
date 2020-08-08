@@ -3,12 +3,12 @@
   :url "https://github.com/AberystwythSystemsBiology/sog"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
             :url "https://www.eclipse.org/legal/epl-2.0/"}
-  :dependencies [[com.grammarly/omniconf "0.3.2"]
-                 [io.github.mightguy/symspell-lib "6.6.130"]
+  :dependencies [[com.grammarly/omniconf "0.3.2"]                 
                  [javax.servlet/servlet-api "2.5"]
                  [metosin/reitit "0.3.10"]
                  [mount "0.1.16"]
                  [org.apache.jena/apache-jena-libs "3.10.0" :extension "pom"]
+                 [org.lundez/symspell "1.0-SNAPSHOT"]
                  [ring/ring-core "1.6.3"]
                  [ring/ring-jetty-adapter "1.6.3"]
                  [ring/ring-json "0.4.0"]
