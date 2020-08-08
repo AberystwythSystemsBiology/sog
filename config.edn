@@ -1,0 +1,6 @@
+{:tdb-dir "./data/tdb"
+ :port 9090
+ :distance 3
+ :ontology-dir "./data/ont"
+ :ontologies ["snomed.owl"]
+ :string-cache-dir "./data/cache"}
