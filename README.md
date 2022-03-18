@@ -6,14 +6,35 @@ The keyword lookup currently uses SymSpell with labels extracted from the ontolo
 ## Installation
 
 Clone the repo, and run `lein deps` to get started.  
+## Quick-start
 
+The fastest way to get up and running with sog is the following:
+* `git clone 'https://github.com/AberystwythSystemsBiology/sog.git'`
+* `cd sog`
+* `mkdir -p data/{cache,ont,tdb}`
+* Copy your ontology files (in RDF/XML format) into the *./data/ont* directory
+* Edit the `:ontologies` entry in *config.edn* to list your ontology files (e.g. `:ontologies ["doid.owl" "icd10.owl"]`)
+* `lein run -- --conf config.edn`
+
+The application will take a while to load and requires a lot of memory.  
+If the JVM's default heap space is too low and the application crashes out before completing startup then amend the *project.clj* map to contain a `:jvm-opts` entry like so:
+```clj
+(defproject sog "0.1.0"
+  :description "Simple Ontology Grep. Greps ontologies."
+  ...
+  :jvm-opts ["-Xmx6g"]
+  ...
+  :profiles {:uberjar {:aot :all}})
+```
+Here we have given 6 gigabytes, but any value supported by your JVM is possible.  
+See the [documentation](https://docs.oracle.com/cd/E13150_01/jrockit_jvm/jrockit/jrdocs/refman/optionX.html) for specifying `-Xmx` and `-Xms` values.
 ## Usage
 
 You may start the program with `lein run -- --conf config.edn`.  
 Settings are stored in `config.edn`, but may also be passed in as command-line args (e.g. `lein run -- --port 9090 --tdb-dir "./data/tdb"`) or environment variables (e.g. `TDB_DIR=./data/tdb lein run`).  
 Options are parsed in the following order: cli args, env vars, conf file.  
 
-
+No database or other external service is required to be launched.
 ## Options
 
 - conf: EDN-formatted config file to load options from
@@ -29,6 +50,34 @@ Options are parsed in the following order: cli args, env vars, conf file.
 - Current memory usage is very high
 - Ontology terms may not contain tabs
 
+## Details
+
+The purpose of this application is to provide a remote API for providing fuzzy matches for terms in a set of ontologies.  
+At present this is powered by the SymSpell algorithm and uses a Damerau-Levenshtein edit distance metric.  
+After the application loads the ontologies into Jena TDB (the triple store) it queries the ontologies for all term labels and builds a concept URI/labels map and stores this to disk.  
+A SymSpell dictionary is then produced from this and a REST API is exposed on the configured port to take query terms and return a ranked list of potential candidate terms, ranked by difference in length and edit distance.
+
+### Damerau-Levenshtein edit distance
+
+A standard [Levenshtein](https://en.wikipedia.org/wiki/Levenshtein_distance) distance is the minimal number of single-character insertions, deletions, or substitutions needed to go from the source to target string.  
+
+| Source | Target | Distance | Insertions | Deletions | Substitutions
+| --- | --- | --- | --- | --- | ---
+| Take | Taken | 1 | 1 | 0 | 0
+| Bridge | Ridge | 0 | 1 | 0 | 0
+| Fool | Cool | 1 | 0 | 0 | 1
+| Codiene | Codeine | 2 | 0 | 0 | 2
+| Auscultation | Oscalation | 4 | 0 | 1 | 3
+
+The [Damerau-Levenshtein](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance) distance differs in that it considers transposition of two adjacent characters as a single operation.
+This allows for certain misspellings to have a reduced edit distance and be higher ranked than they otherwise would.
+In the case of the above table, it would mean "Codiene" would only be a single edit operation away from (the correct) "Codeine" as the "ei" characters are transposed.
+
+### SymSpell
+
+[SymSpell](https://github.com/wolfgarbe/symspell) is a highly optimized spell correction algorithm claiming to be "six orders of magnitude faster" than the classic [norvig](https://norvig.com/spell-correct.html) algorithm.  
+
+Rather than calculating additions/deletions/substitutions of the input term, it instead pre-calculates deletions on the target terms.
 ## License
 
 Copyright © 2020 Rob Bolton
