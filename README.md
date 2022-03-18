@@ -64,7 +64,7 @@ A standard [Levenshtein](https://en.wikipedia.org/wiki/Levenshtein_distance) dis
 | Source | Target | Distance | Insertions | Deletions | Substitutions
 | --- | --- | --- | --- | --- | ---
 | Take | Taken | 1 | 1 | 0 | 0
-| Bridge | Ridge | 0 | 1 | 0 | 0
+| Bridge | Ridge | 1 | 0 | 1 | 0
 | Fool | Cool | 1 | 0 | 0 | 1
 | Codiene | Codeine | 2 | 0 | 0 | 2
 | Auscultation | Oscalation | 4 | 0 | 1 | 3
