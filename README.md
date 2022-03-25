@@ -1,6 +1,6 @@
 # sog
 Simple Ontology Grep (sog) is a project providing a REST API to search a collection of ontologies for a keyword.  
-The keyword lookup currently uses SymSpell with labels extracted from the ontologies, where labels may be `rdfs:label`, `skos:prefLabel`, or `skos:altLabel`.  
+The keyword lookup currently uses Lucene with labels extracted from the ontologies, where labels are by default `rdfs:label`, `skos:prefLabel`, or `skos:altLabel`.  
 
 
 ## Installation
@@ -16,10 +16,11 @@ The fastest way to get up and running with sog is the following:
 * Edit the `:ontologies` entry in *config.edn* to list your ontology files (e.g. `:ontologies ["doid.owl" "icd10.owl"]`)
 * `lein run -- --conf config.edn`
 
-The application will take a while to load and requires a lot of memory.  
-If the JVM's default heap space is too low and the application crashes out before completing startup then amend the *project.clj* map to contain a `:jvm-opts` entry like so:
+The application will take a while to load.
+Jena works quite efficiently but if it requires more memory then the *project.clj* may be modified to provide more.  
+Add a `:jvm-opts` entry like so:
 ```clj
-(defproject sog "0.1.0"
+(defproject sog "0.9.0"
   :description "Simple Ontology Grep. Greps ontologies."
   ...
   :jvm-opts ["-Xmx6g"]
@@ -27,7 +28,11 @@ If the JVM's default heap space is too low and the application crashes out befor
   :profiles {:uberjar {:aot :all}})
 ```
 Here we have given 6 gigabytes, but any value supported by your JVM is possible.  
-See the [documentation](https://docs.oracle.com/cd/E13150_01/jrockit_jvm/jrockit/jrdocs/refman/optionX.html) for specifying `-Xmx` and `-Xms` values.
+See the [documentation](https://docs.oracle.com/cd/E13150_01/jrockit_jvm/jrockit/jrdocs/refman/optionX.html) for specifying `-Xmx` and `-Xms` values.  
+Please note this is not the ideal way to specify this value, but if you are not familiar with Leiningen and Clojure then I recommend you do it this way.  
+Should I push a change that modifies the `project.clj` then you may need to temporarily undo your changes to pull the new version.  
+I may add better instructions for this in the future.  
+
 ## Usage
 
 You may start the program with `lein run -- --conf config.edn`.  
@@ -40,130 +45,202 @@ No database or other external service is required to be launched.
 The following is an example of the output given for accessing the term search API found at `/lookup/<term>`, here searching for "lung cancer" by performing a GET on `/lookup/lung cancer`:  
 
 ```json
-[
-    {
-        "distance": 0.0,
-        "meta": {
-            "labels": [
-                "cancer"
-            ],
-            "objects": {
-                "http://www.geneontology.org/formats/oboInOwl#inSubset": {
-                    "label": [
-                        "in_subset"
-                    ],
-                    "objects": [
-                        {
-                            "iri": "http://purl.obolibrary.org/obo/doid#DO_cancer_slim",
-                            "labels": [
-                                "DO_cancer_slim"
-                            ]
-                        },
-                        {
-                            "iri": "http://purl.obolibrary.org/obo/doid#DO_RAD_slim",
-                            "labels": [
-                                "DO_RAD_slim"
-                            ]
-                        },
-                        {
-                            "iri": "http://purl.obolibrary.org/obo/doid#DO_FlyBase_slim",
-                            "labels": [
-                                "DO_FlyBase_slim"
-                            ]
-                        },
-                        {
-                            "iri": "http://purl.obolibrary.org/obo/doid#DO_CFDE_slim",
-                            "labels": [
-                                "DO_CFDE_slim"
-                            ]
-                        },
-                        {
-                            "iri": "http://purl.obolibrary.org/obo/doid#DO_AGR_slim",
-                            "labels": [
-                                "DO_AGR_slim"
-                            ]
-                        },
-                        {
-                            "iri": "http://purl.obolibrary.org/obo/doid#NCIthesaurus",
-                            "labels": [
-                                "NCIthesaurus"
-                            ]
-                        },
-                        {
-                            "iri": "http://purl.obolibrary.org/obo/doid#DO_GXD_slim",
-                            "labels": [
-                                "DO_GXD_slim"
-                            ]
-                        }
-                    ]
+{
+    "http://purl.obolibrary.org/obo/DOID_0050932": {
+        "labels": [
+            "lung mucoepidermoid carcinoma"
+        ],
+        "objects": {
+            "http://www.geneontology.org/formats/oboInOwl#inSubset": {
+                "labels": [
+                    "in_subset"
+                ],
+                "subjects": {
+                    "http://purl.obolibrary.org/obo/doid#DO_cancer_slim": {
+                        "labels": [
+                            "DO_cancer_slim"
+                        ]
+                    }
                 }
-            },
-            "subjects": {}
+            }
         },
-        "term": "cancer",
-        "url": "http://purl.obolibrary.org/obo/DOID_162"
+        "subjects": {}
     },
-    {
-        "distance": 3.0,
-        "meta": {
-            "labels": [
-                "acne"
-            ],
-            "objects": {},
-            "subjects": {}
+    "http://purl.obolibrary.org/obo/DOID_0060102": {
+        "labels": [
+            "cartilage cancer"
+        ],
+        "objects": {},
+        "subjects": {}
+    },
+    "http://purl.obolibrary.org/obo/DOID_0060119": {
+        "labels": [
+            "pharynx cancer"
+        ],
+        "objects": {
+            "http://www.geneontology.org/formats/oboInOwl#inSubset": {
+                "labels": [
+                    "in_subset"
+                ],
+                "subjects": {
+                    "http://purl.obolibrary.org/obo/doid#NCIthesaurus": {
+                        "labels": [
+                            "NCIthesaurus"
+                        ]
+                    },
+                    "http://purl.obolibrary.org/obo/doid#TopNodes_DOcancerslim": {
+                        "labels": [
+                            "TopNodes_DOcancerslim"
+                        ]
+                    }
+                }
+            }
         },
-        "term": "acne",
-        "url": "http://purl.obolibrary.org/obo/DOID_6543"
+        "subjects": {}
     }
-]
+}
 ```
+
+The top-level map contains each match's concept URI as a key.  
+Inside these match objects are three sections:  
+
+* **"labels"**: All of the concept's labels
+* **"subjects"**: All triples where this concept is the subject
+* **"objects"**: All triples where this concept is the object
+
+Note that "all triples" here actually means all triples that take the simple form `<uri> <uri> <uri>`, so excludes blank nodes and literals.  
+It also requires that both the predicate and the other node have at least one label.  
+
+Inside the "subjects" and "objects" maps are keys of the predicate URI for the triple, and the values are a map of the predicate's label and the matching node's URI and label.  
+To take an example, if the following triples were loaded into the datastore:  
+
+```turtle
+:ObjectA rdfs:label "Object A" ;
+         foaf:knows :ObjectB ;
+         foaf:knows :MysteriousObject ;
+         example:predicate :ObjectB .
+:ObjectB rdfs:label "Object B ;
+         skos:prefLabel "ObbyBobject B" .
+:MysteriousObject foaf:knows :ObjectA ;
+                  foaf:knows :ObjectB .
+```
+
+Assuming the following:  
+* rdfs and foaf are loaded into the triplestore
+* The base URI for these triples is `http://example.com/ontology#`
+* The `example:predicate` concept has no labels
+
+Then the results should look roughly as follows:  
+
+```json
+{
+    "http://example.com/ontology#ObjectA": {
+        "labels": [
+            "Object A"
+        ],
+        "objects": {},
+        "subjects": {
+            "http://xmlns.com/foaf/0.1/knows": {
+                "labels": [
+                    "knows"
+                ],
+                "objects": {
+                    "http://example.com/ontology#ObjectB": {
+                        "labels": [
+                            "Object B",
+                            "ObbyBobject B"
+                        ]
+                    }
+                }
+            }
+        
+        }
+    },
+    "http://example.com/ontology#ObjectB": {
+        "labels": [
+            "Object B",
+            "ObbyBobject B"
+        ],
+        "objects": {
+          "http://xmlns.com/foaf/0.1/knows": {
+                "labels": [
+                    "knows"
+                ],
+                "subjects": {
+                    "http://example.com/ontology#ObjectA": {
+                        "labels": [
+                            "Object A"
+                        ]
+                    }
+                }
+            }
+        },
+        "subjects": {}
+    }
+}
+
+```
+The `:MysteriousObject` appears nowhere because it has no labels, and the `example:predicate` relation does not appear under Subject A because it also has no label.  
+
 
 ## Options
 
-- conf: EDN-formatted config file to load options from
-- tdb-dir: Directory to create/store Jena TDB datastore
-- port: Port to serve the REST API over
-- ontology-dir: Directory containing ontology files
-- ontologies: EDN-formatted list of ontology files (relative to ontology-dir)
-- string-cache-dir: Directory to keep EDN file of term URL/label lookup data, and list of ontologies already loaded into the database
-- distance: Maximum edit-distance to index
+- **conf**: EDN-formatted config file to load options from
+- **tdb-dir**: Directory to create/store Jena TDB datastore
+- **port**: Port to serve the REST API over
+- **ontology-dir**: Directory containing ontology files
+- **ontologies**: EDN-formatted list of ontology files (relative to ontology-dir)
+- **lucene-dir**: Directory to create Lucene indexes in
+- **labels**: List of label URIs to index for full text search
 
 ### Bugs
 
-- Current memory usage is very high
-- Ontology terms may not contain tabs
-
+* Term is directly parsed as Lucene search term. This may have unintended consequences.
+* Ordering relevance of terms is currently not ideal
 ## Details
 
 The purpose of this application is to provide a remote API for providing fuzzy matches for terms in a set of ontologies.  
-At present this is powered by the SymSpell algorithm and uses a Damerau-Levenshtein edit distance metric.  
-After the application loads the ontologies into Jena TDB (the triple store) it queries the ontologies for all term labels and builds a concept URI/labels map and stores this to disk.  
-A SymSpell dictionary is then produced from this and a REST API is exposed on the configured port to take query terms and return a ranked list of potential candidate terms, ranked by difference in length and edit distance.
+At present this is powered by the Apache Lucene full text search functionality provided by Apache Jena.  
 
-### Damerau-Levenshtein edit distance
+Upon starting, the application checks its triplestore to see which ontologies are currently loaded then loads any that are specified in the config file but not present in the triple store.  
+As the TDB triple store is wrapped with a Lucene Datastore, text indexes are generated when the ontologies are loaded in.  
 
-A standard [Levenshtein](https://en.wikipedia.org/wiki/Levenshtein_distance) distance is the minimal number of single-character insertions, deletions, or substitutions needed to go from the source to target string.  
+Once the application has finished loading ontologies, it provides a REST API (default port: 9090) with a single valid route: `/lookup/<term>`  
+Accessing this path with an HTTP GET request will perform a full-text search via Apache Jena for any concepts that vaguely contain this term in one of their labels.  
 
-| Source | Target | Distance | Insertions | Deletions | Substitutions
-| --- | --- | --- | --- | --- | ---
-| Take | Taken | 1 | 1 | 0 | 0
-| Bridge | Ridge | 1 | 0 | 1 | 0
-| Fool | Cool | 1 | 0 | 0 | 1
-| Codiene | Codeine | 2 | 0 | 0 | 2
-| Auscultation | Oscalation | 4 | 0 | 1 | 3
+The query also looks up additional information about the concepts to provide a rough summary of the concept.  
+At present this only includes the concept's relations to other concepts, and only when both the predicate and other concept have at least one label each.  
 
-The [Damerau-Levenshtein](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance) distance differs in that it considers transposition of two adjacent characters as a single operation.
-This allows for certain misspellings to have a reduced edit distance and be higher ranked than they otherwise would.
-In the case of the above table, it would mean "Codiene" would only be a single edit operation away from (the correct) "Codeine" as the "ei" characters are transposed.
+The SPARQL query that achives this is as follows:  
 
-### SymSpell
+```sparql
+SELECT * WHERE {
+  {
+    SELECT DISTINCT ?uri WHERE {
+      ?uri text:query ? .
+    } LIMIT 100
+  }
+  {
+    { ?uri <http://www.w3.org/2000/01/rdf-schema#label> ?label } UNION { ?uri <http://www.w3.org/2004/02/skos/core#prefLabel> ?label } UNION { ?uri <http://www.w3.org/2004/02/skos/core#altLabel> ?label } .
+  }
+  UNION
+  {
+    ?uri ?p ?o .
+    { ?p <http://www.w3.org/2000/01/rdf-schema#label> ?pLabel } UNION { ?p <http://www.w3.org/2004/02/skos/core#prefLabel> ?pLabel } UNION { ?p <http://www.w3.org/2004/02/skos/core#altLabel> ?pLabel } .
+    { ?o <http://www.w3.org/2000/01/rdf-schema#label> ?oLabel } UNION { ?o <http://www.w3.org/2004/02/skos/core#prefLabel> ?oLabel } UNION { ?o <http://www.w3.org/2004/02/skos/core#altLabel> ?oLabel } .
+  }
+  UNION
+  {
+    ?s ?p ?uri .
+    { ?s <http://www.w3.org/2000/01/rdf-schema#label> ?sLabel } UNION { ?s <http://www.w3.org/2004/02/skos/core#prefLabel> ?sLabel } UNION { ?s <http://www.w3.org/2004/02/skos/core#altLabel> ?sLabel } .
+    { ?p <http://www.w3.org/2000/01/rdf
+-schema#label> ?pLabel } UNION { ?p <http://www.w3.org/2004/02/skos/core#prefLabel> ?pLabel } UNION { ?p <http://www.w3.org/2004/02/skos/core#altLabel> ?pLabel } .
+  }
+} LIMIT 5000
+```
 
-[SymSpell](https://github.com/wolfgarbe/symspell) is a highly optimized spell correction algorithm claiming to be "six orders of magnitude faster" than the classic [norvig](https://norvig.com/spell-correct.html) algorithm.  
-
-Rather than calculating additions/deletions/substitutions of the input term, it instead pre-calculates deletions on the target terms.
-
-### 
-
+This is a prepared statement and as such the lone `?` in the `text:query` triple is substituted for the query term provided over REST.  
+Additionally the UNION query fragments depend upon the label predicates specified in config file.
 ## Security
 
 Please run [nvd-clojure](https://github.com/rm-hull/nvd-clojure) against the project before deciding to use it.  

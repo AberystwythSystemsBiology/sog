@@ -1,6 +1,10 @@
 {:tdb-dir "./data/tdb"
+ :lucene-dir "./data/lucene"
  :port 9090
- :distance 3
  :ontology-dir "./data/ont"
- :ontologies ["snomed.owl"]
- :string-cache-dir "./data/cache"}
+ :ontologies 
+ {"http://purl.obolibrary.org/obo/doid.owl" "doid.owl"
+  "http://www.w3.org/2004/02/skos/core" "skos.rdf"}
+ :labels ["http://www.w3.org/2000/01/rdf-schema#label"
+          "http://www.w3.org/2004/02/skos/core#prefLabel"
+          "http://www.w3.org/2004/02/skos/core#altLabel"]}

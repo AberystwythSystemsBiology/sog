@@ -2,8 +2,7 @@
   (:require [omniconf.core :as cfg]
             [mount.core :as mount]
             [sog.api :refer [WebState]]
-            [sog.db :refer [DbState]]
-            [sog.terms :refer [TermState]])
+            [sog.db :refer [DbState]])
   (:gen-class))
 
 (cfg/define
@@ -12,22 +11,21 @@
    :tdb-dir {:description "Location of TDB store"
              :type :directory
              :requried true}
-   :port {:description "Port for REST API"
-          :type :number
-          :requried true
-          :default 9090}
+   :lucene-dir {:description "Location of Lucene index"
+                :type :directory
+                :required true}
    :ontology-dir {:description "Directory containing ontology files"
                   :type :directory
                   :requried true}
    :ontologies {:description "List of ontology files to load"
                 :type :edn
                 :requried true}
-   :string-cache-dir {:description "Directory to store URI/label maps"
-                      :type :directory
-                      :requried true}
-   :distance {:description "Max edit-distance to search & index"
-              :type :number
-              :default 5}})
+   :labels {:description "List of label URIs for predicates to index"
+            :type :edn}
+   :port {:description "Port for REST API"
+          :type :number
+          :requried true
+          :default 9090}})
 
 (defn -main
   "Init datastore, load (or create) term dictionary, start web interface."

@@ -1,24 +1,34 @@
 (ns sog.db
-  (:import [org.apache.jena.tdb TDBFactory]
+  (:import [java.nio.file FileSystems]
+           [org.apache.jena.tdb TDBFactory]
            [org.apache.jena.sparql.core Var]
            [org.apache.jena.query QueryFactory
-                                  QueryExecutionFactory
-                                  Dataset
-                                  ReadWrite])
+            QueryExecutionFactory
+            Dataset
+            ReadWrite
+            ParameterizedSparqlString]
+           [org.apache.jena.graph NodeFactory]
+           [org.apache.jena.query.text
+            EntityDefinition
+            TextDatasetFactory
+            TextIndexConfig]
+           [org.apache.lucene.store Directory NIOFSDirectory])
   (:require [clojure.edn :as edn]
             [mount.core :refer [defstate]]
             [omniconf.core :as cfg]
             [clojure.set :refer [difference]]
-            [clojure.java.io :refer [file]]))
+            [clojure.java.io :as io]
+            [clojure.string :as str]))
 
 
 ;; Initialisation requires self-reference for DbState
 (def DbState)
 
-(defn ontology-cache-file
-  []
-  (file (cfg/get :string-cache-dir)
-        "ontologies.edn"))
+(defn as-path
+  [& paths]
+  (.getPath (FileSystems/getDefault)
+            (first paths)
+            (into-array String (rest paths))))
 
 (defmacro with-dataset
   [dataset readwrite body]
@@ -58,66 +68,97 @@
   (clojure.string/join "\n"
     `("PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>"
       "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>"
+      "PREFIX text: <http://jena.apache.org/text#>"
       ~@(map to-prefix prefixes)
       "SELECT * WHERE {"
       ~@chonks
-      "}")))
+      "} LIMIT 100")))
 
-(defn query-db
-  [db query-str]
-  (with-dataset db ReadWrite/READ
-    (let [model (.getDefaultModel db)
+(defn prepare-fulltext-query
+  [term]
+  (doto (ParameterizedSparqlString.)
+    (.setNsPrefix "rdfs" "http://www.w3.org/2000/01/rdf-schema#")
+    (.setNsPrefix "text" "http://jena.apache.org/text#")
+    (.setCommandText "SELECT * WHERE { ?uri text:query ?; rdfs:label ?label } LIMIT 100")
+    (.setLiteral 0 (str term "~"))))
+
+(defn query-ds
+  [ds query-str]
+  (with-dataset ds ReadWrite/READ
+    (let [model (.getNamedModel ds "urn:x-arq:UnionGraph")
           query (QueryFactory/create query-str)
           query-exec (QueryExecutionFactory/create query model)
           results (doall (iterator-seq (.execSelect query-exec)))
           mapped-results (map result->map results)]
       mapped-results)))
 
-(defn get-loaded-ontologies!
-  []
-  (if (.exists (ontology-cache-file))
-    (edn/read-string (slurp (ontology-cache-file)))
-    (with-open [w (clojure.java.io/writer (ontology-cache-file))]
-      (.write w (pr-str []))
-      #{})))
-
-(defn set-loaded-ontologies!
-  [ontologies]
-  (with-open [w (clojure.java.io/writer (ontology-cache-file))]
-    (.write w (pr-str ontologies)))
-  ontologies)
-
 (defn resolve-full-ont-file
   [file-name]
-  (file (cfg/get :ontology-dir)
-        file-name))
+  (io/file (cfg/get :ontology-dir)
+           file-name))
 
 (defn load-ontology!
-  [db ontology-file]
-  (with-dataset db ReadWrite/WRITE
-    (with-open [r (clojure.java.io/input-stream
-                   (resolve-full-ont-file ontology-file))]
-      (let [model (.getDefaultModel db)]
-        (.read model r "")))))
+  [ds graph-name file-name]
+  (with-dataset ds ReadWrite/WRITE
+    (with-open [r (io/input-stream (resolve-full-ont-file file-name))]
+      (let [model (.getNamedModel ds graph-name)]
+        (.read model r nil)))))
+
+(def q-loaded-owls
+  (str/join
+   "\n"
+   ["PREFIX owl: <http://www.w3.org/2002/07/owl#>"
+    "SELECT ?uri WHERE {"
+      "?uri a owl:Ontology"
+    "}"]))
+
+(defn get-loaded-ontologies
+  [ds]
+  (set (map #(get % "?uri") (query-ds ds q-loaded-owls))))
 
 (defn load-ontologies!
-  [db]
-  (let [wanted-ontologies (set (cfg/get :ontologies))
-        loaded-ontologies (set (get-loaded-ontologies!))
-        unloaded-ontologies (difference wanted-ontologies
-                                        loaded-ontologies)]
-    (doall
-     (reduce (fn [loaded-onts ontology-file]
-               (do (load-ontology! db ontology-file)
-                   (set-loaded-ontologies! (conj loaded-onts ontology-file))))
-             loaded-ontologies
-             unloaded-ontologies))))
+  [ds ontologies]
+  (let [loaded-onts (get-loaded-ontologies ds)
+        left-to-load (reduce dissoc ontologies loaded-onts)]
+    (doseq [[graph-name file-name] left-to-load]
+      (load-ontology! ds graph-name file-name))
+    left-to-load))
+
+(def node-factory (NodeFactory.))
+
+(defn uri-to-node
+  [uri]
+  (NodeFactory/createURI uri))
+
+(defn mk-fulltext-ent-def
+  [fields]
+  (let [ent-def (EntityDefinition. "uri" "text" "graph" (uri-to-node (first fields)))]
+    (doseq [field (map uri-to-node (rest fields))]
+      (.set ent-def "text" field))
+    ent-def))
+
+(defn wrap-ds-with-lucene
+  [ds lucene-dir labels]
+  (let [index-dir (NIOFSDirectory. (as-path lucene-dir))
+        ent-def (mk-fulltext-ent-def labels)
+        text-index-config (TextIndexConfig. ent-def)]
+    (TextDatasetFactory/createLucene ds index-dir text-index-config)))
+
+(defn mk-lucene-ds
+  [tdb-dir lucene-dir labels]
+  (let [tdb-ds (-> tdb-dir
+                   io/as-file
+                   .getAbsolutePath
+                   TDBFactory/createDataset)]
+    (wrap-ds-with-lucene tdb-ds lucene-dir labels)))
 
 (defn start-db
   []
-  (let [datastore (TDBFactory/createDataset
-                   (.getAbsolutePath (cfg/get :tdb-dir)))]
-    (load-ontologies! datastore)
+  (let [datastore (mk-lucene-ds (cfg/get :tdb-dir)
+                                (.getAbsolutePath (cfg/get :lucene-dir))
+                                (cfg/get :labels))
+        ontologies (cfg/get :ontologies)]
+    (load-ontologies! datastore ontologies)
     datastore))
 
 (defn stop-db

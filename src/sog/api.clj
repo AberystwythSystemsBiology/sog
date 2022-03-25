@@ -14,7 +14,7 @@
 (defn lookup-handler
   [request]
   (let [target-term (get-in request [:path-params :term])
-        suggestions (terms/lookup-term target-term (cfg/get :distance))]
+        suggestions (terms/lookup-term target-term (cfg/get :labels))]
     {:status 200
      :body suggestions}))
     
