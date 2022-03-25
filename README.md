@@ -35,6 +35,89 @@ Settings are stored in `config.edn`, but may also be passed in as command-line a
 Options are parsed in the following order: cli args, env vars, conf file.  
 
 No database or other external service is required to be launched.
+
+### API
+The following is an example of the output given for accessing the term search API found at `/lookup/<term>`, here searching for "lung cancer" by performing a GET on `/lookup/lung cancer`:  
+
+```json
+[
+    {
+        "distance": 0.0,
+        "meta": {
+            "labels": [
+                "cancer"
+            ],
+            "objects": {
+                "http://www.geneontology.org/formats/oboInOwl#inSubset": {
+                    "label": [
+                        "in_subset"
+                    ],
+                    "objects": [
+                        {
+                            "iri": "http://purl.obolibrary.org/obo/doid#DO_cancer_slim",
+                            "labels": [
+                                "DO_cancer_slim"
+                            ]
+                        },
+                        {
+                            "iri": "http://purl.obolibrary.org/obo/doid#DO_RAD_slim",
+                            "labels": [
+                                "DO_RAD_slim"
+                            ]
+                        },
+                        {
+                            "iri": "http://purl.obolibrary.org/obo/doid#DO_FlyBase_slim",
+                            "labels": [
+                                "DO_FlyBase_slim"
+                            ]
+                        },
+                        {
+                            "iri": "http://purl.obolibrary.org/obo/doid#DO_CFDE_slim",
+                            "labels": [
+                                "DO_CFDE_slim"
+                            ]
+                        },
+                        {
+                            "iri": "http://purl.obolibrary.org/obo/doid#DO_AGR_slim",
+                            "labels": [
+                                "DO_AGR_slim"
+                            ]
+                        },
+                        {
+                            "iri": "http://purl.obolibrary.org/obo/doid#NCIthesaurus",
+                            "labels": [
+                                "NCIthesaurus"
+                            ]
+                        },
+                        {
+                            "iri": "http://purl.obolibrary.org/obo/doid#DO_GXD_slim",
+                            "labels": [
+                                "DO_GXD_slim"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "subjects": {}
+        },
+        "term": "cancer",
+        "url": "http://purl.obolibrary.org/obo/DOID_162"
+    },
+    {
+        "distance": 3.0,
+        "meta": {
+            "labels": [
+                "acne"
+            ],
+            "objects": {},
+            "subjects": {}
+        },
+        "term": "acne",
+        "url": "http://purl.obolibrary.org/obo/DOID_6543"
+    }
+]
+```
+
 ## Options
 
 - conf: EDN-formatted config file to load options from
@@ -78,6 +161,16 @@ In the case of the above table, it would mean "Codiene" would only be a single e
 [SymSpell](https://github.com/wolfgarbe/symspell) is a highly optimized spell correction algorithm claiming to be "six orders of magnitude faster" than the classic [norvig](https://norvig.com/spell-correct.html) algorithm.  
 
 Rather than calculating additions/deletions/substitutions of the input term, it instead pre-calculates deletions on the target terms.
+
+### 
+
+## Security
+
+Please run [nvd-clojure](https://github.com/rm-hull/nvd-clojure) against the project before deciding to use it.  
+Install instructions may be found in the official repository, after which you should run the following while in the root of this repository:  
+`clojure -J-Dclojure.main.report=stderr -Tnvd nvd.task/check :classpath '"'"$(lein with-profile -user classpath)"'"'`
+To locate which direct dependency is pulling in a vulnerable indirect dependency, run `lein deps :tree` to see the dependency tree.  
+
 ## License
 
 Copyright © 2020 Rob Bolton
