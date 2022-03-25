@@ -233,8 +233,7 @@ SELECT * WHERE {
   {
     ?s ?p ?uri .
     { ?s <http://www.w3.org/2000/01/rdf-schema#label> ?sLabel } UNION { ?s <http://www.w3.org/2004/02/skos/core#prefLabel> ?sLabel } UNION { ?s <http://www.w3.org/2004/02/skos/core#altLabel> ?sLabel } .
-    { ?p <http://www.w3.org/2000/01/rdf
--schema#label> ?pLabel } UNION { ?p <http://www.w3.org/2004/02/skos/core#prefLabel> ?pLabel } UNION { ?p <http://www.w3.org/2004/02/skos/core#altLabel> ?pLabel } .
+    { ?p <http://www.w3.org/2000/01/rdf-schema#label> ?pLabel } UNION { ?p <http://www.w3.org/2004/02/skos/core#prefLabel> ?pLabel } UNION { ?p <http://www.w3.org/2004/02/skos/core#altLabel> ?pLabel } .
   }
 } LIMIT 5000
 ```
