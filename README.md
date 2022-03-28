@@ -47,7 +47,6 @@ No database or other external service is required to be launched.
 The following is an example of the output given for accessing the term search API found at `/lookup/<term>`, here searching for "lung cancer" by performing a GET on `/lookup/lung cancer`:  
 
 ```json
-{
 [
     {
         "labels": [
@@ -107,7 +106,7 @@ The following is an example of the output given for accessing the term search AP
         "subjects": {},
         "uri": "http://purl.obolibrary.org/obo/DOID_3905"
     }
-}
+]
 ```
 
 The top-level array contains each match.  
