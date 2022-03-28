@@ -22,7 +22,7 @@ The application will take a while to load.
 Jena works quite efficiently but if it requires more memory then the *project.clj* may be modified to provide more.  
 Add a `:jvm-opts` entry like so:
 ```clj
-(defproject sog "0.9.0"
+(defproject sog "1.0.0"
   :description "Simple Ontology Grep. Greps ontologies."
   ...
   :jvm-opts ["-Xmx6g"]
