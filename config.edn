@@ -5,6 +5,8 @@
  :ontologies 
  {"http://purl.obolibrary.org/obo/doid.owl" "doid.owl"
   "http://www.w3.org/2004/02/skos/core" "skos.rdf"}
+ :max-distance 3
  :labels ["http://www.w3.org/2000/01/rdf-schema#label"
           "http://www.w3.org/2004/02/skos/core#prefLabel"
-          "http://www.w3.org/2004/02/skos/core#altLabel"]}
+          "http://www.w3.org/2004/02/skos/core#altLabel"
+          "http://www.geneontology.org/formats/oboInOwl#hasExactSynonym"]}

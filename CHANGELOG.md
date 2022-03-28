@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased]
 
+## 1.0.0 - 2022-03-28
+
+### Added
+- Basic web page to use application for simple searches without REST client
+- Separate REST API endpoint for raw lucene query text
+
+### Changed
+- Previous toplevel result map changed (again) back into list
+- Search results should now return in order of relevance once again
+
 ## 0.9.0 - 2022-03-25
 
 ### Added

@@ -1,0 +1,151 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SOG: Simple Ontology Grep</title>
+  <style>
+    #bodyContainer {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    #error {
+      color: red;
+    }
+    #resultsTable {
+      margin-top: 2em;
+      max-width: 80em;
+      background-color: peachpuff;
+    }
+    legend {
+      font-size: larger;
+    }
+    tbody tr:nth-child(odd) {
+      background-color: aliceblue;
+    }
+    tbody tr:nth-child(even) {
+      background-color: antiquewhite;
+    }
+    form {
+      background-color: peachpuff;
+      border-radius: 0.5em;
+      box-shadow: 0.2em 0.2em 0px 0px;
+    }
+    fieldset {
+      border: none;
+    }
+    .invisible {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="bodyContainer">
+    <form id="searchForm" onsubmit="doSearch">
+      <fieldset>
+        <legend>Search Ontologies</legend>
+        <input id="term" name="term">
+        <input id="submit" type="submit" value="Search">
+        <br/>
+        <label for="method">Raw Query <small>[<a href="https://lucene.apache.org/core/9_1_0/queryparser/org/apache/lucene/queryparser/classic/package-summary.html#package.description" rel="noreferrer noopener" target="_blank">?</a>]</small></label>
+        <input id="method" name="method" type="checkbox">
+        <br/>
+        <p id="error" class="invisible"></p>
+      </fieldset>
+    </form>
+    <div id="resultsContainer">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th>URI</th>
+            <th>Labels</th>
+          </tr>
+        </thead>
+        <tbody id="results">
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    const searchForm = document.getElementById('searchForm');
+    const inputBox = document.getElementById('term');
+    const methodCheckbox = document.getElementById('method');
+    const searchButton = document.getElementById('submit');
+    const errorText = document.getElementById('error');
+    const resultRows = document.getElementById('results')
+    
+    searchForm.onsubmit = doSearch;
+
+    function showError(text) {
+      errorText.textContent = text;
+      errorText.setAttribute('class', '');
+    }
+    function clearError() { errorText.setAttribute('class', 'invisible'); }
+
+    function disableForm() {
+      inputBox.disabled = true;
+      searchButton.disabled = true;
+    }
+    function enableForm() {
+      inputBox.disabled = false;
+      searchButton.disabled = false;
+    }
+
+    function doSearch(event) {
+      event.preventDefault();
+      clearError();
+      let term = inputBox.value;
+      let method = methodCheckbox.checked ? 'raw' : 'lookup';
+      if (term === '') {
+        showError('Must provide search term');
+        return false;
+      }
+      disableForm();
+      fetch(`/${method}/${term}`)
+        .then((response) => {
+          enableForm();
+          if (!response.ok) {
+            showError(JSON.stringify(response));
+            throw new Error(`HTTP error! Status ${ response.status }`);
+          }
+
+          return response.json();
+        })
+        .then((results) => {
+          processResults(results);
+        });
+      return false;
+    }
+
+    function processResults(results) {
+      resultRows.replaceChildren([]);
+      for (let i = 0; i < results.length; i++) {
+        let uri = results[i].uri;
+        let label = results[i].labels.join(", ");
+
+        let row = document.createElement('tr');
+
+        let uriElem = document.createElement('td');
+        let uriElemLink = document.createElement('a');
+        let uriElemText = document.createTextNode(uri);
+        uriElemLink.setAttribute('href', uri);
+
+        let labelElem = document.createElement('td');
+        let labelElemText = document.createTextNode(label);
+
+        uriElemLink.appendChild(uriElemText);
+        uriElem.appendChild(uriElemLink);
+        row.appendChild(uriElem);
+
+        labelElem.appendChild(labelElemText);
+        row.appendChild(labelElem);
+
+        resultRows.appendChild(row);
+      }
+    }
+  </script>
+</body>
+</html>

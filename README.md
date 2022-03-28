@@ -3,6 +3,8 @@ Simple Ontology Grep (sog) is a project providing a REST API to search a collect
 The keyword lookup currently uses Lucene with labels extracted from the ontologies, where labels are by default `rdfs:label`, `skos:prefLabel`, or `skos:altLabel`.  
 
 
+![sog](https://user-images.githubusercontent.com/8222624/160463111-2c3fc133-d3e3-4d90-bf08-9a7f24530971.jpg)
+
 ## Installation
 
 Clone the repo, and run `lein deps` to get started.  
@@ -46,9 +48,42 @@ The following is an example of the output given for accessing the term search AP
 
 ```json
 {
-    "http://purl.obolibrary.org/obo/DOID_0050932": {
+[
+    {
         "labels": [
-            "lung mucoepidermoid carcinoma"
+            "lung cancer"
+        ],
+        "objects": {
+            "http://www.geneontology.org/formats/oboInOwl#inSubset": {
+                "labels": [
+                    "in_subset"
+                ],
+                "subjects": {
+                    "http://purl.obolibrary.org/obo/doid#DO_CFDE_slim": {
+                        "labels": [
+                            "DO_CFDE_slim"
+                        ]
+                    },
+                    "http://purl.obolibrary.org/obo/doid#DO_cancer_slim": {
+                        "labels": [
+                            "DO_cancer_slim"
+                        ]
+                    },
+                    "http://purl.obolibrary.org/obo/doid#TopNodes_DOcancerslim": {
+                        "labels": [
+                            "TopNodes_DOcancerslim"
+                        ]
+                    }
+                }
+            }
+        },
+        "subjects": {},
+        "uri": "http://purl.obolibrary.org/obo/DOID_1324"
+    },
+    {
+        "labels": [
+            "lung carcinoma",
+            "cancer of lung"
         ],
         "objects": {
             "http://www.geneontology.org/formats/oboInOwl#inSubset": {
@@ -60,50 +95,25 @@ The following is an example of the output given for accessing the term search AP
                         "labels": [
                             "DO_cancer_slim"
                         ]
-                    }
-                }
-            }
-        },
-        "subjects": {}
-    },
-    "http://purl.obolibrary.org/obo/DOID_0060102": {
-        "labels": [
-            "cartilage cancer"
-        ],
-        "objects": {},
-        "subjects": {}
-    },
-    "http://purl.obolibrary.org/obo/DOID_0060119": {
-        "labels": [
-            "pharynx cancer"
-        ],
-        "objects": {
-            "http://www.geneontology.org/formats/oboInOwl#inSubset": {
-                "labels": [
-                    "in_subset"
-                ],
-                "subjects": {
+                    },
                     "http://purl.obolibrary.org/obo/doid#NCIthesaurus": {
                         "labels": [
                             "NCIthesaurus"
                         ]
-                    },
-                    "http://purl.obolibrary.org/obo/doid#TopNodes_DOcancerslim": {
-                        "labels": [
-                            "TopNodes_DOcancerslim"
-                        ]
                     }
                 }
             }
         },
-        "subjects": {}
+        "subjects": {},
+        "uri": "http://purl.obolibrary.org/obo/DOID_3905"
     }
 }
 ```
 
-The top-level map contains each match's concept URI as a key.  
-Inside these match objects are three sections:  
+The top-level array contains each match.  
+Inside these match objects are four sections:  
 
+* **"uri"**: The concept's URI
 * **"labels"**: All of the concept's labels
 * **"subjects"**: All triples where this concept is the subject
 * **"objects"**: All triples where this concept is the object
@@ -133,8 +143,9 @@ Assuming the following:
 Then the results should look roughly as follows:  
 
 ```json
-{
-    "http://example.com/ontology#ObjectA": {
+[
+    {
+        "uri": "http://example.com/ontology#ObjectA",
         "labels": [
             "Object A"
         ],
@@ -156,7 +167,8 @@ Then the results should look roughly as follows:
         
         }
     },
-    "http://example.com/ontology#ObjectB": {
+    {
+        "uri": "http://example.com/ontology#ObjectB",
         "labels": [
             "Object B",
             "ObbyBobject B"
@@ -177,7 +189,7 @@ Then the results should look roughly as follows:
         },
         "subjects": {}
     }
-}
+]
 
 ```
 The `:MysteriousObject` appears nowhere because it has no labels, and the `example:predicate` relation does not appear under Subject A because it also has no label.  

@@ -1,8 +1,12 @@
 (ns sog.core
-  (:require [omniconf.core :as cfg]
-            [mount.core :as mount]
+  (:require [mount.core :as mount]
+            [omniconf.core :as cfg]
             [sog.api :refer [WebState]]
-            [sog.db :refer [DbState]])
+            [sog.db :refer [DbState]]
+            [taoensso.timbre :as timbre
+             :refer [log  trace  debug  info  warn  error  fatal  report
+                     logf tracef debugf infof warnf errorf fatalf reportf
+                     spy get-env]])
   (:gen-class))
 
 (cfg/define
@@ -22,6 +26,9 @@
                 :requried true}
    :labels {:description "List of label URIs for predicates to index"
             :type :edn}
+   :max-distance {:description "Maximum edit distance for match to search"
+                  :type :number
+                  :default 3}
    :port {:description "Port for REST API"
           :type :number
           :requried true
